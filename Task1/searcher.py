@@ -90,7 +90,19 @@ def intersect_sorted_lists(list1, list2):
     return res
 
 
-def search(index, query):
+def process_not(docs_count, list1):
+    res = []
+    i, p = 0, 0
+    for i in range(docs_count):
+        if p < len(list1) and list1[p] == i:
+            p += 1
+        else:
+            res.append(i)
+
+    return res
+
+
+def search(index, query, docs_count):
     expr_stack = parse_query(query)
 
     def evaluate_stack():
@@ -100,7 +112,7 @@ def search(index, query):
         elif top == 'or':
             return unite_sorted_lists(evaluate_stack(), evaluate_stack())
         elif top == 'not':
-            pass    # TODO
+            return process_not(docs_count, evaluate_stack())
         else:
             term = top.lower()
             return index[term] if term in index else []
@@ -166,7 +178,7 @@ def main():
     print 'Enter query:'
     query = sys.stdin.readline()
     print 'Searching...'
-    res_ids = search(index, query)
+    res_ids = search(index, query, len(docs_list))
     print 'Found {} results:'.format(len(res_ids))
     max_results_to_print = 10
     printed = 0
