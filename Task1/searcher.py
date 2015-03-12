@@ -1,6 +1,8 @@
 import argparse
 import os.path
 import sys
+import xml.etree.cElementTree as ET
+import re
 
 import msgpack
 from pyparsing import Word, alphanums, Forward, CaselessKeyword, Literal, ZeroOrMore, Optional
@@ -106,8 +108,40 @@ def search(index, query):
     return evaluate_stack()
 
 
-def generate_snippet(query, f):
-    return 'My not yet implemented snippet'
+def collect_sentences(filename):
+    tree = ET.parse(filename)
+
+    def do_collect(root):
+        res = [root.text]
+        for child in root:
+            res.extend(do_collect(child))
+
+        return res
+
+    sentences = []
+    for text in do_collect(tree.getroot()):
+        sentences.extend(text.split('.'))
+
+    return sentences
+
+
+def generate_snippet(query, filename):
+    res = ''
+    sentences = collect_sentences(filename)
+    max_sentences_to_print = 3
+    printed = 0
+    for word in re.compile('\w+').findall(query.lower()):
+        if word in ('and', 'or', 'not'):
+            continue
+        for sentence in sentences:
+            if word in sentence.lower():
+                res += '> {} \n'.format(sentence)
+                printed += 1
+                if printed == max_sentences_to_print:
+                    return res
+                break
+
+    return res
 
 
 def main():
@@ -139,8 +173,7 @@ def main():
     for doc_id in res_ids:
         doc = docs_list[doc_id]
         print 'Document:', doc
-        with open(os.path.join(corpus_dir, doc)) as f:
-            print generate_snippet(query, f)
+        print generate_snippet(query, os.path.join(corpus_dir, doc))
         print '------------------------------'
         printed += 1
         if printed == max_results_to_print:
